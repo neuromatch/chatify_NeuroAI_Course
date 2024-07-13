@@ -10,6 +10,10 @@ env:
   NMA_MAIN_BRANCH: main
   PREREQ_REPO: precourse
   PREREQ_INTRO: NeuroAI
+  CHATIFY: true
+  # Make sure this matches the current link
+  SOURCE_REPO: NeuroAI_Course
+  MOD_REPO: chatify_NeuroAI_Course
 
 # This job installs dependencies, build the book, and pushes it to `gh-pages`
 jobs:
@@ -47,6 +51,23 @@ jobs:
           rm -r $BRANCH.tar.gz
           echo ci/ >> .gitignore
 
+      - name: Install Chatify, Add to Notebooks, Commit Changes
+        if: env.CHATIFY == 'true'
+        run: |
+          pip install -r ci/chatify/requirements.txt
+          python ci/chatify/process_notebooks.py
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add '**/student/*.ipynb'
+          git diff-index --quiet HEAD || git commit -m "Add chatify to student tutorial notebooks"
+
+      - name: Push Chatify Changes to Main
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
+          force: false
+  
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -90,7 +111,7 @@ jobs:
       - name: Build student book
         run: |
           python ci/generate_book.py student
-          jupyter-book toc migrate /home/runner/work/NeuroAI_Course/NeuroAI_Course/book/_toc.yml -o /home/runner/work/NeuroAI_Course/NeuroAI_Course/book/_toc.yml
+          jupyter-book toc migrate /home/runner/work/chatify_NeuroAI_Course/chatify_NeuroAI_Course/book/_toc.yml -o /home/runner/work/chatify_NeuroAI_Course/chatify_NeuroAI_Course/book/_toc.yml
           ln -s ../tutorials book/tutorials
           ln -s ../projects book/projects
           ln -s ../prereqs book/prereqs
@@ -101,7 +122,7 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          ghp-import -n -c "neuroai.neuromatch.io" -m "Update course book" book/_build/html
+          ghp-import -n -c "chatify.neuroai.neuromatch.io" -m "Update course book" book/_build/html
           git checkout -f gh-pages
 
       - name: Publish to gh-pages
